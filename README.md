@@ -1,6 +1,6 @@
 # CSharp-IP-Cam-Receiver
 
-This application is able to work with Android IP Cam Sender in my repository.  
+This application is able to work with the project titled Android-IP-Cam-Sender in my repository.  
 
 Development IDE: Visual Studio 2010  
 Language: C#  
