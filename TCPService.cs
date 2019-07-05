@@ -42,30 +42,30 @@ static class TSocket
 //======================================================================================================
 // Server Class
 //======================================================================================================
-// 데이터 수신 이벤트핸들링 함수 delegate 원형
+// Data receive event handling function delegate
 public delegate void ServerDataArrivalHandler();
 
 class TServer
 {
     private int buffersize = 65536;
 
-    // Server용 Socket 객체
-    private TcpListener listener = null;        // Listening중에만존재, 연결되면null
+    // Socket object for server
+    private TcpListener listener = null;        // only for listening
     private TcpClient clientForServer = null;
     private NetworkStream streamServer = null;
 
-    // 현재의 상태
+    // current status object
     private csConnStatus serverStatus = csConnStatus.Closed;
 
-    // Server용 수신 thread
+    // receive thread for server
     private Thread threadServerRcv = null;
     private Thread threadChkPartnerDeath = null;
 
-    // Server 수신 데이터
+    // received data for server
     private string serverRcvMessage = "";
     private List<byte> serverRcvByteList = new List<byte>();
 
-    // 수신이벤트를 위한 델리게이트
+    // delegate for recieve event
     private ServerDataArrivalHandler DataArrivalCallback;
 
     //===============================================================
@@ -97,13 +97,13 @@ class TServer
         if (serverStatus == csConnStatus.Listening) return;
         if (serverStatus == csConnStatus.Connected) return;
 
-        // 1단계 : Start
+        // Step 1 : Start
         try
         {
-            // server측 접속 IP 객체 얻기
+            // Getting IP object for server
             IPEndPoint serverAddress = new IPEndPoint(IPAddress.Parse(serverIP), serverPort);
 
-            // server 객체 얻기
+            // Getting server object
             listener = new TcpListener(serverAddress);
 
             // Start
@@ -115,18 +115,19 @@ class TServer
             return;
         }
 
-        // 2단계 : Listen 시작
+        // Step 2 : start listening
         bool success = ServerBeginListen();
 
         serverStatus = csConnStatus.Listening;
     }
 
     //===============================================================
-    //  Server : Listen 시작 [Async 모드]
+    //  Server : Start listening [Async mode]
     //===============================================================
     private bool ServerBeginListen()
     {
-        try  // listening중에 다시 같은 포트로 들어오는 경우 대비
+        // Prevents accepting different connection with same port while listening
+        try
         {
             listener.BeginAcceptTcpClient(new AsyncCallback(DoAcceptTcpClientCallback), listener);
         }
@@ -136,11 +137,12 @@ class TServer
     }
 
     //---------------------------------------------------------------
-    //  Listen CallBack 함수
+    //  Listen CallBack method
     //---------------------------------------------------------------
     private void DoAcceptTcpClientCallback(IAsyncResult ar)
     {
-        try  // Listen 대기중 Close 했을때의 exception 처리를 위해
+        // exception process in case socket close happens while listening
+        try 
         {
             // Get the listener that handles the client request.
             listener = (TcpListener)ar.AsyncState;
@@ -148,15 +150,15 @@ class TServer
             // End the operation
             clientForServer = listener.EndAcceptTcpClient(ar);
 
-            // stream 객체 얻기
+            // Get stream object
             streamServer = clientForServer.GetStream();
 
-            // 수신 thread 시작
+            // Start receive thread
             threadServerRcv = new Thread(ServerReceiveThreadMain);
             threadServerRcv.IsBackground = true;
             threadServerRcv.Start();
 
-            // 상대 돌발죽음 감시 thread 시작
+            // Start thread that checks unexpected connection death with partner
             threadChkPartnerDeath = new Thread(ServerCheckPartnerDeathThread);
             threadChkPartnerDeath.IsBackground = true;
             threadChkPartnerDeath.Start();
@@ -170,7 +172,7 @@ class TServer
         }
         finally
         {
-            // 연결되건, 최소되건 listener는 필요 없어짐
+            // stop listener after connection established or cancelled
             listener.Stop();
             listener = null;
         }
@@ -185,12 +187,14 @@ class TServer
         if (listener != null) listener.Stop();
 
         while (true)
-        {   // listening중에 close되면 
-            // DoAcceptTcpClientCallback()에서 listener처리할때까지 대기
+        {   
+            // if server close happen when listening,
+            // waiting until DoAcceptTcpClientCallback() finishes the listener object.
             if (listener == null) break;
         }
 
-        // 순서 바뀌면 안됨
+        // Close receive thread and connect death check thread
+        // ** sequence of stopping threads has to be fixed. 
         if (threadServerRcv != null && threadServerRcv.IsAlive)
         {
             threadServerRcv.Abort();
@@ -229,21 +233,11 @@ class TServer
     }
 
     //===============================================================
-    //  수신 데이터 꺼내기
+    //  Push out receive data to user application
     //===============================================================
-    public string GetRcvMsg()
-    {
-        lock (serverRcvMessage)  //<- thread간 동기화
-        {
-            string tmp = serverRcvMessage;
-            serverRcvMessage = "";
-            return tmp;
-        }
-    }
-
     public byte[] GetRcvBytes()
     {
-        lock (serverRcvByteList)
+        lock (serverRcvByteList)    //<- synchronize between threads
         {
             byte[] tmp = serverRcvByteList.ToArray();
             serverRcvByteList.Clear();
@@ -272,14 +266,15 @@ class TServer
                 //StringBuilder strbuff = new StringBuilder();
 
                 int nbyteRead = 0;
-                // 도착 message가 buffer 크기보다 큰 경우를 위해 loop
+                // loop for when arrived data is larger than receive buffer size
                 do
                 {
                     nbyteRead = streamServer.Read(bytebuff, 0, bytebuff.Length);    // blocking
                     if (nbyteRead == 0)
-                    {   // 상대방이 close했음을 감지
+                    { 
+                        // Confirm partner close connection
                         serverStatus = csConnStatus.Closed;
-                        ServerClose();              //<- 없으면 안됨!!
+                        ServerClose();              //<- has to call the method.
                     }
 
                     byteTemp = new byte[nbyteRead];
@@ -290,18 +285,13 @@ class TServer
                 }
                 while (streamServer.DataAvailable);
 
-                // 수신버퍼에 복사
-                //lock (serverRcvMessage)  //<- thread간 동기화
-                //{
-                //    serverRcvMessage += strbuff;
-                //}
-
+                // Copy to recive buffer to the received data
                 lock (serverRcvByteList)
                 {
                     serverRcvByteList.AddRange(ListByteBuff);
                 }
 
-                // 데이터 수신 callback 함수 호출
+                // Call Data receive callback
                 if (DataArrivalCallback != null) { DataArrivalCallback(); }
             }
         }
@@ -322,9 +312,7 @@ class TServer
             {
                 Thread.Sleep(5);
 
-                // 상대방 client가 connected에서 갑자기 꺼져 버리면
-                // Closed로 바꾸는 방법이 정기적인 검사밖에 없음. 
-                // 상황보다 약간 늦게 알게되지만 상관없음.
+                // check continuously if connection is lost
                 if (serverStatus == csConnStatus.Connected)
                 {
                     if (clientForServer != null && clientForServer.Client != null)
@@ -343,33 +331,34 @@ class TServer
 //======================================================================================================
 // Client Class
 //======================================================================================================
-// 데이터 수신 이벤트핸들링 함수 delegate 원형
+// Data receive event handling function delegate
 public delegate void ClientDataArrivalHandler();
 
 class TClient
 {
     private int buffersize = 65536;
 
-    // Client용 Socket 객체
+    // Socket object for client
     private TcpClient clientForClient = null;
     private NetworkStream streamClient = null;
 
-    // 현재의 상태
+    // current status object
     private csConnStatus clientStatus = csConnStatus.Closed;
 
-    // Client용 수신 thread
+    // receive thread for client
     private Thread threadClientRcv = null;
     private Thread threadChkPartnerDeath = null;
 
-    // Client 수신 데이터
+    // Receive data for client
     private string clientRcvMessage = "";
     private List<byte> clientRcvByteList = new List<byte>();
 
-    // 수신이벤트를 위한 델리게이트
+    // Delegate for receive event
     private ClientDataArrivalHandler DataArrivalCallback;
     //===============================================================
-    //  생성자 1 : 수신데이터 이벤트핸들링 없은 경우.
-    //  생성자 2 : 수신데이터 이벤트핸들링 함수를 지정하는 경우
+    //  Constructor 1 : set set Receiving event handler to null.
+    //  Constructor 2 : set Receiving event handler to the user defined one.
+    //  Constructor 3 : set Receiving event handler and Receivig buffer size.
     //===============================================================
     public TClient()
     {
@@ -387,7 +376,7 @@ class TClient
     }
 
     //===============================================================
-    //  Client : Connect 시도 [Async 모드]
+    //  Client : Try Connect [Async mode]
     //===============================================================
     public void ClientBeginConnect(string serverIP, int serverPort, string clientIP)
     {
@@ -395,18 +384,18 @@ class TClient
         if (clientStatus == csConnStatus.Connecting) return;
         if (serverIP == "") return;
 
-        // server측 접속 IP 객체 얻기
+        // Get server IP object
         IPEndPoint serverAddress = new IPEndPoint(IPAddress.Parse(serverIP), serverPort);
 
-        // client측 접속 IP 객체 얻기
-        // port = 0은 임의의 할당포트 사용하겠다는 뜻
+        // Get client IP object
+        // port = 0 means getting random port
         int dumport = 0;
         IPEndPoint clientAddress = new IPEndPoint(IPAddress.Parse(clientIP), dumport);
 
-        // client 객체 얻기
+        // Get client object
         clientForClient = new TcpClient(clientAddress);
 
-        // connected 시작
+        // Start trying to connect
         IPAddress serverIpAddress = IPAddress.Parse(serverIP);
         clientForClient.BeginConnect(serverIpAddress, serverPort, new AsyncCallback(DoConnectTcpClientCallback), clientForClient);
 
@@ -414,7 +403,7 @@ class TClient
     }
 
     //---------------------------------------------------------------
-    //  Connect CallBack 함수
+    //  Connect Callback method
     //---------------------------------------------------------------
     private void DoConnectTcpClientCallback(IAsyncResult ar)
     {
@@ -422,14 +411,14 @@ class TClient
         {
             clientForClient = (TcpClient)ar.AsyncState;
             clientForClient.EndConnect(ar);
-            streamClient = clientForClient.GetStream(); // stream 객체 얻기
+            streamClient = clientForClient.GetStream(); // Get stream object
 
-            // 수신 thread 시작
+            // Start receive thread 
             threadClientRcv = new Thread(ClientReceiveThreadMain);
             threadClientRcv.IsBackground = true;
             threadClientRcv.Start();
 
-            // 상대 돌발죽음 감시 thread 시작
+            // Start thread that checks partner connect death
             threadChkPartnerDeath = new Thread(ClientCheckPartnerDeathThread);
             threadChkPartnerDeath.IsBackground = true;
             threadChkPartnerDeath.Start();
@@ -450,7 +439,6 @@ class TClient
         if (clientForClient != null) clientForClient.Close();
         clientForClient = null;
 
-        // 순서 바뀌면 안됨
         if (threadClientRcv != null && threadClientRcv.IsAlive)
         {
             threadClientRcv.Abort();
@@ -489,11 +477,11 @@ class TClient
     }
 
     //===============================================================
-    //  수신 데이터 꺼내기
+    //  push out received data to user application
     //===============================================================
     public string GetRcvMsg()
     {
-        lock (clientRcvMessage)  //<- thread간 동기화
+        lock (clientRcvMessage)         //<- snychorize between threads
         {
             string tmp = clientRcvMessage;
             clientRcvMessage = "";
@@ -503,7 +491,7 @@ class TClient
 
     public byte[] GetRcvBytes()
     {
-        lock (clientRcvByteList)
+        lock (clientRcvByteList)        //<- snychorize between threads
         {
             byte[] tmp = clientRcvByteList.ToArray();
             clientRcvByteList.Clear();
@@ -531,12 +519,13 @@ class TClient
                 //StringBuilder strbuff = new StringBuilder();
                 
                 int nbyteRead = 0;
-                // 도착 message가 buffer 크기보다 큰 경우를 위해 loop
+                // Loop for when arrived data is larger than receive buffer size
                 do
                 {
                     nbyteRead = streamClient.Read(bytebuff, 0, bytebuff.Length);    // blocking
                     if (nbyteRead == 0)
-                    {   // 상대방이 close했음을 감지
+                    {   
+                        // Detect partner close the connection
                         clientStatus = csConnStatus.Closed;
                         ClientClose();
                     }
@@ -544,23 +533,16 @@ class TClient
                     byteTemp = new byte[nbyteRead];
                     Array.Copy(bytebuff, 0, byteTemp, 0, nbyteRead);
                     ListByteBuff.AddRange(byteTemp);
-
-                    //strbuff.AppendFormat("{0}", Encoding.UTF8.GetString(bytebuff, 0, nbyteRead));
                 }
                 while (streamClient.DataAvailable);
 
-                // 수신버퍼에 복사
-                //lock (clientRcvMessage)  //<- thread간 동기화
-                //{
-                //    clientRcvMessage += strbuff;
-                //}
-
+                // Copy to receive buffer
                 lock (clientRcvByteList)
                 {
                     clientRcvByteList.AddRange(ListByteBuff);
                 }
 
-                // 데이터 수신 callback 함수 호출
+                // Call data receive callback method
                 if (DataArrivalCallback != null) { DataArrivalCallback(); }
             }
         }
@@ -579,9 +561,7 @@ class TClient
             {
                 Thread.Sleep(5);
 
-                // 상대방이 connected에서 갑자기 꺼져 버리면
-                // Closed로 바꾸는 방법이 정기적인 검사밖에 없음. 
-                // 상황보다 약간 늦게 알게되지만 상관없음.
+                // checks routinely if the connect is lost
                 if (clientStatus == csConnStatus.Connected)
                 {
                     if (clientForClient != null && clientForClient.Client != null)
