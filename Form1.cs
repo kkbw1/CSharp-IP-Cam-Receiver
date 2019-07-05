@@ -32,15 +32,6 @@ namespace TCP_UDP_IMAGE
         bool bDisplayImage = false;
 
         String strMsgTx;
-
-        //TcpListener tcpListener;
-        //TcpClient tcpServer;
-        //NetworkStream tcpNS;
-
-        //UdpClient udpServer;
-        //IPEndPoint udpClientEP;
-
-        //byte[] bufferRx;
        
         //********************************************************************************************//
         //                                                                                            //
@@ -520,103 +511,25 @@ namespace TCP_UDP_IMAGE
                     listBuffer.CopyTo(idxStart, buffPreviewJpeg, 0, buffPreviewJpeg.Length);
                     listBuffer.RemoveRange(idxStart, buffPreviewJpeg.Length);
 
-                    //byte[] buffFirst;
-                    //byte[] buffLast;
-                    //if (idxStart != 0)
-                    //{
-                    //    /*take the data before the idxStart and after idxEnd */
-                    //    buffFirst = new byte[idxStart];
-                    //    buffLast = new byte[packetLength - idxEnd - 1];
-                    //    Array.Copy(buffRecv, 0, buffFirst, 0, idxStart);
-                    //    Array.Copy(buffRecv, idxEnd, buffLast, 0, packetLength - idxEnd - 1);
-                    //}
-                    //else
-                    //{
-                    //    buffLast = new byte[packetLength - idxEnd - 1];
-                    //    Array.Copy(buffRecv, idxEnd, buffLast, 0, packetLength - idxEnd - 1);
-                    //}
-
-                    ///* copy data from idxStart to idxEnd */
-                    //buffJpeg = new byte[idxEnd - idxStart + 1];
-                    //Array.Copy(buffRecv, idxStart, buffJpeg, 0, idxEnd - idxStart + 1);
-
-                    //listStacked.AddRange(buffLast);
-
                     /* display the jpeg data in the picturebox */
                     Invoke(new ViewImageDataDelegate(PB_setImage), new object[] { pictureBox1, buffPreviewJpeg, buffPreviewJpeg.Length });
                 }
                 else if (idxStart > idxEnd)
                 {
-                    //Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "2" });
-
-                    ///* shouldn't be data existed between idxEnd and idxStart */
-                    //byte[] buffFirst = new byte[idxEnd + 1];
-                    //byte[] buffLast = new byte[packetLength - idxStart];
-
-                    ///* copy data before and including idxEnd */
-                    //Array.Copy(buffRecv, 0, buffFirst, 0, idxEnd + 1);
-                    ///* copy data after and including idxStart */
-                    //Array.Copy(buffRecv, idxStart, buffLast, 0, packetLength - idxStart);
-
-                    ///* append the data until idxEnd and convert to the jpeg data */
-                    //listStacked.AddRange(buffFirst);
-                    //buffJpeg = listStacked.ToArray();
-
-                    ///* make new list buffer to add new data that is not transferred completely */
-                    //listStacked.Clear();
-                    //listStacked.AddRange(buffLast);
+                    /* no action so far */
                 }
             }
             else if (idxStart != -1 && idxEnd == -1)        // only idxStart is detected
             {
-                //Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "3" });
-
-                ///* in this case, idxStart should be always 0 */
-                //byte[] buffFirst = new byte[idxStart];
-                //byte[] buffLast = new byte[packetLength - idxStart];
-
-                //Array.Copy(buffRecv, 0, buffFirst, 0, buffFirst.Length);
-                //Array.Copy(buffRecv, idxStart, buffLast, 0, buffLast.Length);
-
-                //listStacked.AddRange(buffFirst);
-                //buffJpeg = listStacked.ToArray();
-
-                //listStacked.Clear();
-                //listStacked.AddRange(buffLast);
-
-                //if (buffJpeg.Length > 4)
-                //{
-                //    /* display the jpeg data in the picturebox */
-                //    Invoke(new ViewImageDataDelegate(PB_setImage), new object[] { pictureBox1, buffJpeg, buffJpeg.Length });
-                //}
+                /* no action so far */
             }
             else if (idxStart == -1 && idxEnd != -1)        // only idxEnd is detected
             {
-                //Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "4" });
-
-                //byte[] buffFirst = new byte[idxEnd + 1];
-                //byte[] buffLast = new byte[packetLength - idxEnd - 1];
-
-                //Array.Copy(buffRecv, 0, buffFirst, 0, buffFirst.Length);
-                //Array.Copy(buffRecv, idxEnd + 1, buffLast, 0, buffLast.Length);
-
-                //listStacked.AddRange(buffFirst);
-                //buffJpeg = listStacked.ToArray();
-
-                //listStacked.Clear();
-                //listStacked.AddRange(buffLast);
-
-                ///* display the jpeg data in the picturebox */
-                //Invoke(new ViewImageDataDelegate(PB_setImage), new object[] { pictureBox1, buffJpeg, buffJpeg.Length });
+                /* no action so far */
             }
             else if (idxStart == -1 && idxEnd == -1)        // none of the idxs is detected
             {
-                //Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "5" });
-
-                //byte[] buff = new byte[packetLength];
-                //Array.Copy(buffRecv, buff, buff.Length);
-
-                //listStacked.AddRange(buff);
+                /* no action so far */
             }
         }
 
@@ -652,142 +565,5 @@ namespace TCP_UDP_IMAGE
                 return;
             }
         }
-
-        ////********************************************************************************************
-        ////********************************************************************************************
-        ////*************************************Callback Method****************************************
-        ////********************************************************************************************
-        ////********************************************************************************************
-
-        ////--------------------------------------------------------------------------------------------
-        ////-------------------------------------TCP Callback-------------------------------------------
-        ////--------------------------------------------------------------------------------------------
-        //private void tcpAcceptTcpClientCallback(IAsyncResult ar)       //  To prevent cross thread error
-        //{
-        //    try
-        //    {
-        //        TcpListener listener = (TcpListener)ar.AsyncState;
-
-        //        tcpServer = listener.EndAcceptTcpClient(ar);
-        //        tcpNS = tcpServer.GetStream();
-
-        //        String remoteIP = tcpServer.Client.RemoteEndPoint.ToString();
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Connect From " + remoteIP });
-
-        //        bufferRx = new byte[tcpServer.ReceiveBufferSize];      // The default value is 8192 bytes.
-        //        tcpNS.BeginRead(bufferRx, 0, bufferRx.Length, tcpBeginReadCallback, tcpNS);
-        //    }
-        //    catch (ObjectDisposedException)
-        //    {
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "TCP Server Close." });
-        //        return;
-        //    }
-        //}
-
-        //private void tcpBeginReadCallback(IAsyncResult ar)          //  To prevent cross thread error
-        //{
-        //    try
-        //    {
-        //        NetworkStream ns = (NetworkStream)ar.AsyncState;
-        //        int len = ns.EndRead(ar);
-
-        //        if (len > 0)
-        //        {
-        //            if (bDisplayImage == false)
-        //            {
-        //                String message_rx = Encoding.UTF8.GetString(bufferRx, 0, len);
-        //                Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Length=" + len.ToString() });
-        //                Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Receive: " + message_rx });
-        //            }
-        //            else if (bDisplayImage == true)
-        //            {
-        //                //showPreviewImage(len, bufferRx, listBufferRemained);
-        //            }
-
-        //            bufferRx = new byte[tcpServer.ReceiveBufferSize];      // The default value is 8192 bytes.
-        //            ns.BeginRead(bufferRx, 0, bufferRx.Length, tcpBeginReadCallback, ns);
-        //        }
-        //        else
-        //        {
-        //            Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Client left." });
-        //            Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Click the close button." });
-        //            //closeServer();
-        //        }
-        //    }
-        //    catch (ObjectDisposedException)
-        //    {
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "TCP Server has been Closed." });
-        //        return;
-        //    }
-        //    catch (IOException)
-        //    {
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "TCP Server has been Closed." });
-        //        return;
-        //    }
-        //}
-
-        //private void tcpBeginWriteCallback(IAsyncResult ar)
-        //{
-        //    NetworkStream ns = (NetworkStream)ar.AsyncState;
-        //    ns.EndWrite(ar);
-
-        //    Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Transmit: " + strMsgTx });
-        //    textBox1.Text = "";
-        //}
-
-        ////--------------------------------------------------------------------------------------------
-        ////-------------------------------------UDP Callback-------------------------------------------
-        ////--------------------------------------------------------------------------------------------
-        //private void udpBeginReceiveCallback(IAsyncResult ar)
-        //{
-        //    try
-        //    {
-        //        UdpClient u = (UdpClient)ar.AsyncState;
-
-        //        //IPEndPoint UdpSource = new IPEndPoint(0, 0);
-        //        //byte[] UdpBuffer = u.EndReceive(ar, ref UdpSource);
-
-        //        byte[] UdpBuffer = u.EndReceive(ar, ref udpClientEP);
-        //        string UdpBufferStr = Encoding.UTF8.GetString(UdpBuffer);
-
-        //        if (bDisplayImage == false)
-        //        {
-        //            // 접속된 클라이언트의 IP 주소와 포트 출력
-        //            Invoke(new AddListBoxDelegate(listBox_Add),
-        //                new object[] { listBox1, "Receive from " + udpClientEP.Address.ToString() 
-        //            + ":" + udpClientEP.Port.ToString() });
-        //            Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Receive: " + UdpBufferStr });
-        //            Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Length: " + UdpBuffer.Length });
-        //        }
-        //        else if (bDisplayImage == true)
-        //        {
-
-
-        //            //showPreviewImage(UdpBuffer.Length, UdpBuffer, listBufferRemained);
-
-        //            //sendMessage("UDPACK");
-        //        }
-
-        //        u.BeginReceive(udpBeginReceiveCallback, u);
-        //    }
-        //    catch (ObjectDisposedException)
-        //    {
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "UDP Server Close." });
-        //        return;
-        //    }
-        //    catch (Exception)
-        //    {
-        //        Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Exception" });
-        //        return;
-        //    }
-        //}
-
-        //private void udpBeginWriteCallback(IAsyncResult ar)
-        //{
-        //    UdpClient u = (UdpClient)ar.AsyncState;
-
-        //    Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "number of bytes sent: " + u.EndSend(ar).ToString() });
-        //    Invoke(new AddListBoxDelegate(listBox_Add), new object[] { listBox1, "Transmit: " + strMsgTx });
-        //}
     }
 }
